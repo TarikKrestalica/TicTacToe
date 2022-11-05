@@ -1,205 +1,245 @@
-// Work in Progress!
 using System;
+using System.Collections.Generic;
 
-namespace TicTacToe
+namespace TicTacToePart2
 {
     class MainClass
     {
         public static void Main(string[] args)
         {
-            // Setup: Make the initial board, indicate the pieces, and the goal is to fill in 9 empty spaces
-            char[,] gameBoard = new char[3, 3] { {' ', ' ', ' '},
-                                                 {' ', ' ', ' '},
-                                                 {' ', ' ', ' '} };
-            char player1 = 'X', player2 = 'O';
-            int turn = 0;
-            int emptySpaces = gameBoard.Length;
-            string horizontal = "\n-----------", vertical = " |";
+            // Create the board and pieces
+            int BOARDSIZE = 3;
+            char[,] gameBoard = CreateBoard(BOARDSIZE);
+            char player1Piece = 'X', player2Piece = 'O', currentPiece = ' ';
 
+            // Create a turn variable and obtain the number of elements in my board
+            int playerTurn = 0, avaliableSpaces = BOARDSIZE * BOARDSIZE;
 
-            // Playing the Game: As long as the board is not full!!
-            while (emptySpaces != 0)
+            PlayGame(BOARDSIZE, gameBoard, player1Piece, player2Piece, currentPiece, avaliableSpaces, playerTurn);
+            
+        }
+
+        /// <summary>
+        /// Create and Print Out Initial Board Status
+        /// </summary>
+        /// <param name="board"></Create a 2D array of the user's specified choice>
+        public static void PrintBoard(char[,] board)
+        {
+           for(int row = 0; row < board.GetLength(0); row++)
+           {
+                for (int col = 0; col < board.GetLength(1); col++)
+                {
+                    // For every row: Leave a space, place the empty piece, space, then the divider(only if I'm not on the last column)
+                    if (col < board.GetLength(1) - 1)
+                        Console.Write(" " + board[row, col] + " |");
+                    else
+                        Console.Write(" " + board[row, col]);
+                }
+                // Place the horizontal divider where appropriate, need to obtain the number of rows
+                if (row < board.GetLength(0) - 1)
+                    Console.WriteLine("\n" + CreateHorizontalDivider(board.GetLength(0)));  
+           }
+                
+        }
+
+        // Initialize an empty 2D game board with a specified size
+        public static char[,] CreateBoard(int size)
+        {
+            char[,] board = new char[size, size];
+            for(int row = 0; row < board.GetLength(0); row++)
             {
-                CurrentBoardState(gameBoard, vertical, horizontal);
+                for (int col = 0; col < board.GetLength(1); col++)
+                    board[row, col] = ' ';
+            }
+            return board;
+        }
 
-                // Alternate between player 1 and 2, assign the appropriate piece
-                int result = turn % 2;
-                char piece = result < 1 ? player1 : player2;
+        // Make the divider adjustable based on the dimensions of the gameboard
+        public static string CreateHorizontalDivider(int size)
+        {
+            // Figure out the length of my divider!
+            int dividerLength = (4 * size) - 1;
 
-                // Message, "\n\n: Separate the board from the prompt
-                string response = result < 1 ? "Player 1's turn!" : "Player 2's turn!";
-                Console.WriteLine("\n\n" + response);
+            // One by one, we'll add the dash until we meet the dimensions
+            string divider = "";
+            for (int i = 0; i < dividerLength; i++)
+                divider += "-";
 
-                // Prompt the user for a row, must be 0-2
-                Console.Write("Enter a row number(0-2): ");
-                string row = Console.ReadLine();
+            return divider;
+        }
 
-                // Did the user enter a valid row number?
-                if (int.TryParse(row, out int rowNum))
+        // Check and validate the input! No text and in bounds!
+        public static bool InputIsValidated(string[] info, int size)
+        {
+            // Create a tracking variable!
+            int numOfvalidations = 0;
+            foreach (string piece in info)
+            {
+                bool isNum = int.TryParse(piece, out int data);
+                if (isNum)
                 {
-                    if (rowNum < 0 || rowNum > 2)
-                    {
-                        Console.WriteLine($"Row {row} is out of bounds. Please Try Again!");
-                        continue;
-                    }
+                    // Check if each piece of data is in bounds
+                    if (data > 0 && data <= 3)
+                        numOfvalidations++;
                 }
-                // Keep asking the user until a number is entered
-                else
-                {
-                    Console.WriteLine($"{row} is not a number. Try Again!\n");
-                    continue;
-                }
+                    
+            }
+            // Do I have a row number and a column number?
+            return numOfvalidations == info.Length;
 
+        }
 
-                // Prompt the user for a column, check for validity, 0-2
-                Console.Write("Enter a column number(0 - 2): ");
-                string column = Console.ReadLine();
+        // Check for valid location
+        public static bool ValidatedLocation(char[,] board, int row, int column, char currentPiece)
+        {
+            // Reference my board at the specified position: Open Space or occupied?
+            switch (board[row - 1, column - 1])
+            {
+                // Empty space
+                case ' ':
+                    board[row - 1, column - 1] = currentPiece;
+                    return true;
+                // X or an O
+                default:
+                    return false;
+            }
+        }
 
-                // Did the user enter a number?
-                if (int.TryParse(column, out int colNum))
-                {
-                    if (colNum < 0 || colNum > 2)
-                    {
-                        Console.WriteLine($"Column {column} is out of bounds. Please Try Again!");
-                        continue;
-                    }
+        // Check horizontal wins!
+        public static bool HorizontalWin(char[,] board, char piece, int size)
+        {
+            // Create a tracking list to count for consecutive pieces
+            List<char> consecutivePieces = new List<char>();    
+            for (int i = 0; i < board.GetLength(0); i++)
+            {
+                // Go through every spot in my row
+                for (int j = 0; j < board.GetLength(1); j++)
+                { 
+                    if (board[i, j] == piece)
+                        consecutivePieces.Add(piece);
                 }
-                // Keep asking the user until a number is entered
-                else
+                // Do I have 3 of a kind?
+                if (consecutivePieces.Count == size)
+                    return true;
+
+                // Clear, reset for the next row
+                consecutivePieces.Clear();  
+            }
+
+            return false;   
+        }
+
+        // Check Vertical wins! Down through each column
+        public static bool VerticalWin(char[,] board, char piece, int size)
+        {
+            // Create a tracking list to count for consecutive pieces
+            List<char> consecutivePieces = new List<char>();
+            for(int j = 0; j < board.GetLength(1); j++)
+            {
+                for (int i = 0; i < board.GetLength(0); i++)
                 {
-                    Console.WriteLine($"{column} is not a number. Try Again!\n");
-                    continue;
+                    if (board[i, j] == piece)
+                        consecutivePieces.Add(piece);
                 }
+                if (consecutivePieces.Count == size)
+                    return true;
+                // Clear, prepare for the next column
+                consecutivePieces.Clear();
+            }
+
+            return false;
+        }
+        
+        public static bool negativelySlopedWin(char[,] board, char piece, int size)
+        {
+            for (int i = 0; i < size; i++)
+            {
+                // Exit early for any opposing piece
+                if (board[i, i] != piece)
+                    return false;
+            }
+            // By default
+            return true;    
+        }
+
+        public static bool positivelySlopedWin(char[,] board, char piece, int size)
+        {
+            // Increment column, decrement row
+            for(int i = 0; i < size; i++)
+            {
+                if (board[(size - i) - 1, i] != piece)
+                    return false;
+            }
+            // Default!
+            return true;
+              
+        }
+        // Account for positive and negative sloped wins!
+        public static bool DiagonalWin(char[,] board, char piece, int size)
+        {
+            return negativelySlopedWin(board, piece, size) || positivelySlopedWin(board, piece, size);
+        }
+        // Check All Possible Wins!
+        public static bool WinningMove(char[,] board, char piece, int size)
+        {
+            return HorizontalWin(board, piece, size) || VerticalWin(board, piece, size) || DiagonalWin(board, piece, size);
+        }
+
+        // Entire Game Logic
+        public static void PlayGame(int size, char[,] board, char player1, char player2, char workingPiece, int spaces, int turn)
+        {
+            // Game Loop
+            do
+            {
+                PrintBoard(board);
+
+                // Signify whose turn is it!
+                string message = turn % 2 == 0 ? "Player 1's turn!" : "Player 2's turn!";
+
+                // Prompt the user
+                Console.WriteLine("\n\n" + message);
+                Console.Write("Enter a row and column(1-3): ");
+                string[] input = Console.ReadLine().Split(' ');
 
                 Console.Clear();
 
-                // Is the location invalid
-                if (!ValidLocation(gameBoard, rowNum, colNum, piece))
-                    continue;   // Prompt the user again
-
-                // Otherwise, modify my turn variable and decrement my empty space
-                else
+                // Check if the user's input is invalid! 
+                if (!InputIsValidated(input, size))
                 {
-                    emptySpaces--;
-                    ++turn;
+                    Console.WriteLine($"Row {input[0]}, column {input[1]} is not a Valid Location!");
+                    continue;
                 }
 
-                // Check for winning moves
-                if (WinningMove(gameBoard, piece) == true)
-                    break;
+                // Prepare the piece, store the user's location, verify the location
+                workingPiece = turn % 2 == 0 ? player1 : player2;
+                int row = int.Parse(input[0]), column = int.Parse(input[1]);
 
-            }
-
-            CurrentBoardState(gameBoard, vertical, horizontal);
-
-        }
-
-        // All game actions
-
-        // Print out the game board
-        static void CurrentBoardState(char[,] board, string verticalDivider, string horizontalDivider)
-        {
-            for (int row = 0; row < board.GetLength(0); ++row)
-            {
-                for (int col = 0; col < board.GetLength(1); ++col)
+                if (!ValidatedLocation(board, row, column, workingPiece))
                 {
-                    // Add a space, place the piece, place my vertical divider when appropriate(not at column 2)
-                    if (col < board.GetLength(1) - 1)
-                        Console.Write(" " + board[row, col] + verticalDivider);
-                    else
-                        Console.Write(" " + board[row, col]);
-
+                    Console.WriteLine($"Row {row}, Column {column} is taken!");
+                    continue;
                 }
-
-                // Place the divider only if I am not in the last row!
-                if (row < board.GetLength(0) - 1)
-                    Console.WriteLine(horizontalDivider);
-            }
-
-        }
+                // Indicate one less piece, check for all possible win combinations!
+                spaces--;
+                turn++;
 
 
-        // Is there an opposing piece at the player's chosen position?
-        static bool ValidLocation(char[,] board, int row, int column, char piece)
-        {
-            if (board[row, column] != 'X' && board[row, column] != 'O')
+            } while (spaces != 0 && !WinningMove(board, workingPiece, size));
+
+            // Endgame: Print out final board state, check for either a win or a draw
+            PrintBoard(board);
+            if (spaces >= 0 && WinningMove(board, workingPiece, size))
             {
-                // Place the piece, decrement my empty spaces, increment the turn count
-                board[row, column] = piece;
-                return true;
+                string winningMessage = workingPiece == player1 ? "Player 1 wins!" : "Player 2 wins!";
+                Console.WriteLine("\n\n" + winningMessage);
             }
             else
-            {
-                // Throw an error message, prompt the user again!
-                Console.WriteLine($"Row {row}, Column {column} is taken! Please try Again!");
-                return false;
-            }
-        }
-
-        // Do I have winning moves?
-        static bool WinningMove(char[,] board, char piece)
-        {
-            int numOfPieces = 0;    // Track my pieces
-
-            // Create a winning message: Separate the message from the final game board
-            string message = piece == 'X' ? "Player 1 Wins!\n" : "Player 2 Wins!\n";
-
-            // Check horizontal wins
-            for (int row = 0; row < board.GetLength(0); ++row)
-            {
-                for (int col = 0; col < board.GetLength(1); ++col)
-                {
-                    // Go through each column and find any instance of the player's piece
-                    if (board[row, col] == piece)
-                        numOfPieces++;
-                }
-
-                // Do I have a winning move? Do I have a 3 of a kind?
-                if (numOfPieces == board.GetLength(1))
-                {
-                    Console.WriteLine(message);
-                    return true;
-                }
-                // Otherwise, reset the process
-                else
-                    numOfPieces = 0;
-
-            }
-
-            // Check vertical wins
-            for (int col = 0; col < board.GetLength(1); ++col)
-            {
-                for (int row = 0; row < board.GetLength(0); ++row)
-                {
-                    // Go through each row
-                    if (board[row, col] == piece)
-                        numOfPieces++;
-                }
-
-                // Do I have a winning move? Do I have a 3 of a kind?
-                if (numOfPieces == board.GetLength(1))
-                {
-                    Console.WriteLine(message);
-                    return true;
-                }
-
-                // Otherwise, reset the process
-                else
-                    numOfPieces = 0;
-
-
-            }
-
-            // After checking all wins, return false by default
-            return false;
-
-
+                Console.WriteLine("\n\nDraw!");
 
         }
-
 
 
     }
-
 }
+
 
